@@ -1,0 +1,16 @@
+License Agreement for Baby FTP Server:
+
+This application is free for personal use.
+This application may not be sold, rented, leased, sublicensed or modified without permission of the author.
+This application is provided "AS IS" without warranty of any kind including, but not limited to, warranties of
+merchantability, fitness for a particular purpose and non-infringement. In no event will 
+Pablo Software Solutions be liablefor any direct, indirect, incidental, special, exemplary or
+consequential damages, including damages for loss of profits, loss or inaccuracy of data, incurred by any person from such
+person's usage of this application if advised of the possibility of such damages.
+
+
+Paypal donations are welcome! See http://www.pablovandermeer.nl/about.html for more information.
+
+April 20, 2004
+
+http://www.pablovandermeer.nl

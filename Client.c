@@ -13,12 +13,18 @@
 
 int passive(int networkSocket);
 int FTPConnect();
-void list();
+void list(char path[]);
 void listLocal(char path[]);
-void receiveFile(char filename[]);
+void receiveFile(char filename[], char path[]);
 void sendFile(char filename[]);
-void deleteFile(char filename[]);
-void renameFile(char filename[]);
+void deleteFile(char filename[], char path[]);
+void renameFile(char filename[], char path[]);
+void createFolder(char foldername[]);
+void selectFolder(char foldername[]);
+void listFolder(char foldername[]);
+void downloadAll(char foldername[]);
+void deleteFolder(char filename[]);
+void deleteAll(char foldername[]);
 
 int main(){
     while(1){
@@ -27,7 +33,11 @@ int main(){
         printf("3. Ikelti faila\n");
         printf("4. Pervadinti faila\n");
         printf("5. Istrinti faila\n");
-        printf("6. Iseiti\n");
+        printf("6. Sukurti kataloga\n");
+        printf("7. Pasirinkti kataloga\n");
+        printf("8. Katalogo failai\n");
+        printf("9. Istrinti kataloga\n");
+        printf("10. Parsiusti kataloga\n");
         printf("Pasirinkite veiksma: ");
 
         int selection;
@@ -37,33 +47,66 @@ int main(){
         while ((c = getchar()) != '\n' && c != EOF) { }
 
         switch (selection){
-            case 1 : list();
+            case 1 : list("");
                 getchar();
             break;
-            case 2 : list();
-                printf("Iveskite failo pavadinima, kuri norite parsisiusti:");
+            case 2 : list("");
+                printf("Iveskite failo pavadinima, kuri norite parsisiusti: ");
                 scanf("%[^\n]", filename);
                 while ((c = getchar()) != '\n' && c != EOF) { }
-                receiveFile(filename);
+                receiveFile(filename, "");
                 getchar();
                 break;
             case 3 : listLocal("/mnt/c/Users/Jokubas/Documents/Code/Computer networks/FTP client/");
-                printf("Iveskite failo pavadinima, kuri norite ikelti:");
+                printf("Iveskite failo pavadinima, kuri norite ikelti: ");
                 scanf("%[^\n]", filename);
                 while ((c = getchar()) != '\n' && c != EOF) { }
                 sendFile(filename);
                 break;
-            case 4 : list();
-                printf("Iveskite failo pavadinima, kuri norite pervadinti:");
+            case 4 : list("");
+                printf("Iveskite failo pavadinima, kuri norite pervadinti: ");
                 scanf("%[^\n]", filename);
                 while ((c = getchar()) != '\n' && c != EOF) { }
-                renameFile(filename);
+                renameFile(filename, "");
                 break;
-            case 5 : list();
-                printf("Iveskite failo pavadinima, kuri norite istrinti:");
+            case 5 : list("");
+                printf("Iveskite failo pavadinima, kuri norite istrinti: ");
                 scanf("%[^\n]", filename);
                 while ((c = getchar()) != '\n' && c != EOF) { }
-                deleteFile(filename);
+                deleteFile(filename, "");
+                break;
+            case 6 : list("");
+                printf("Iveskite katalogo pavadinima ");
+                scanf("%[^\n]", filename);
+                while ((c = getchar()) != '\n' && c != EOF) { }
+                createFolder(filename);
+                break;
+            case 7 : list("");
+                printf("Iveskite katalogo pavadinima ");
+                scanf("%[^\n]", filename);
+                while ((c = getchar()) != '\n' && c != EOF) { }
+                selectFolder(filename);
+                list(filename);
+                break;
+            case 8 : list("");
+                printf("Iveskite katalogo pavadinima ");
+                scanf("%[^\n]", filename);
+                while ((c = getchar()) != '\n' && c != EOF) { }
+                list(filename);
+                break;
+            case 9 :
+                list("");
+                printf("Iveskite katalogo pavadinima ");
+                scanf("%[^\n]", filename);
+                while ((c = getchar()) != '\n' && c != EOF) { }
+                deleteFolder(filename);
+                break;
+            case 10 :
+                list("");
+                printf("Iveskite katalogo pavadinima ");
+                scanf("%[^\n]", filename);
+                while ((c = getchar()) != '\n' && c != EOF) { }
+                downloadAll(filename);
                 break;
             default : return 0;
         }
@@ -71,13 +114,210 @@ int main(){
     return 0;
 }
 
-void renameFile(char filename[]){
+void listFolder(char foldername[]){
+
+}
+
+
+void deleteFolder(char filename[]){
+
+    deleteAll(filename);
     int networkSocket = FTPConnect();
 
     char command[64] = {0};
     char server_message[64] = {0};
 
-    strcpy(command, "RNFR /");
+    strcpy(command, "RMD ");
+    strcat(command, filename);
+    strcat(command, "\r\n");
+    send(networkSocket, command, sizeof(command), 0);
+    memset(server_message, 0, sizeof server_message);
+    recv(networkSocket, &server_message, sizeof(server_message), 0);
+    printf("%s", server_message);
+
+    close(networkSocket);
+}
+
+void downloadAll(char foldername[]){
+    int networkSocket = FTPConnect();
+    int passiveSocket = passive(networkSocket);
+
+    //paprasom failu list'o
+    char command[4096] = {0};
+    char server_message[4096] = {0};
+    strcpy(command, "LIST ");
+    strcat(command, foldername);
+    strcat(command, "\r\n");
+    send(networkSocket, command, sizeof(command), 0);
+    recv(networkSocket, &server_message, sizeof(server_message), 0);
+    printf("%s \n", server_message);
+    memset(server_message, 0, sizeof server_message);
+
+    unsigned char buffer[1024];
+    memset(buffer, 0, sizeof buffer);
+    recv(passiveSocket, &buffer, sizeof(buffer), 0);
+    //printf("---------------------------------FAILAI ESANTYS FTP-----------------------------\n");
+    printf("%s", buffer);
+
+    memset(server_message, 0, sizeof server_message);
+    //recv(networkSocket, &server_message, sizeof(server_message), 0);
+
+    close(passiveSocket);
+    close(networkSocket);
+
+    char filename[4096] = {0};
+    
+    char *token;
+    //memset(token, 0, sizeof token);
+    token = strtok(buffer, " ");
+    int t = 0;
+    int i = 0;
+    while(token != NULL){
+        //printf( " %s\n", token );
+        token = strtok(NULL, " -\n");
+        if(t == 7){
+            //char path[32] = {0};
+            //strcpy(path, foldername);
+            //strcat(path, "/");
+            //printf("%s\n", token);
+            //strcat(path, token);
+            strcpy(filename, token);
+            filename[strlen(token)-1] = '\0';
+            //printf("%s\n", token);
+            char *ext = strrchr(filename, '.');
+            if (!ext) {
+                char foldername1[32] = {0};
+                strcpy(foldername1, foldername);
+                strcat(foldername1, "/");
+                strcat(foldername1, filename);
+                printf("%s", foldername1);
+                sleep(2);
+                downloadAll(foldername1);
+                
+                
+            } else {
+                //printf("extension is %s\n", ext + 1);
+                receiveFile(filename, foldername);
+            }   
+            
+
+            //token[strlen(token)-1]='\0';
+            //filename[strlen(filename-1)] = '\0';
+
+            /*
+            for(int k = 0; k <= strlen(token) - 2; ++k){
+                printf("%c\n", token[k]);
+            }
+            */
+            //token[strlen(token)-1] = 0;
+            
+
+            
+            
+            ++i;
+            t = -2;
+        }
+        ++t;
+    }
+}
+
+
+
+
+void deleteAll(char foldername[]){
+    int networkSocket = FTPConnect();
+    int passiveSocket = passive(networkSocket);
+
+    //paprasom failu list'o
+    char command[32] = {0};
+    char server_message[64] = {0};
+    strcpy(command, "LIST ");
+    strcat(command, foldername);
+    strcat(command, "\r\n");
+    send(networkSocket, command, sizeof(command), 0);
+    recv(networkSocket, &server_message, sizeof(server_message), 0);
+    printf("%s \n", server_message);
+    memset(server_message, 0, sizeof server_message);
+
+    unsigned char buffer[1024];
+    memset(buffer, 0, sizeof buffer);
+    recv(passiveSocket, &buffer, sizeof(buffer), 0);
+    //printf("---------------------------------FAILAI ESANTYS FTP-----------------------------\n");
+    //printf("%s", buffer);
+
+    memset(server_message, 0, sizeof server_message);
+    recv(networkSocket, &server_message, sizeof(server_message), 0);
+
+    close(passiveSocket);
+    close(networkSocket);
+
+    char filename[128] = {0};
+    
+    char *token;
+    //memset(token, 0, sizeof token);
+    token = strtok(buffer, " ");
+    int t = 0;
+    int i = 0;
+    while(token != NULL){
+        //printf( " %s\n", token );
+        token = strtok(NULL, " -\n");
+        if(t == 7){
+            strcpy(filename, token);
+
+            filename[strlen(token)-1] = '\0';
+
+            printf("%s\n", token);
+            deleteFile(filename, foldername);
+            ++i;
+            t = -2;
+        }
+        ++t;
+    }
+}
+
+void selectFolder(char foldername[]){
+    int networkSocket = FTPConnect();
+
+    char command[128] = {0};
+    char server_message[128] = {0};
+
+    strcpy(command, "CWD ");
+    strcat(command, foldername);
+    strcat(command, "\r\n");
+    send(networkSocket, command, sizeof(command), 0);
+    memset(server_message, 0, sizeof server_message);
+    recv(networkSocket, &server_message, sizeof(server_message), 0);
+    printf("%s", server_message);
+
+    close(networkSocket);
+}
+
+void createFolder(char foldername[]){
+    int networkSocket = FTPConnect();
+
+    char command[64] = {0};
+    char server_message[64] = {0};
+
+    strcpy(command, "MKD ");
+    strcat(command, foldername);
+    strcat(command, "\r\n");
+    send(networkSocket, command, sizeof(command), 0);
+    memset(server_message, 0, sizeof server_message);
+    recv(networkSocket, &server_message, sizeof(server_message), 0);
+    printf("%s", server_message);
+
+    close(networkSocket);
+}
+
+void renameFile(char filename[], char path[]){
+    int networkSocket = FTPConnect();
+
+    char command[64] = {0};
+    char server_message[64] = {0};
+
+    strcpy(command, "RNFR ");
+    strcat(command, path);
+    strcat(command, "/");
     strcat(command, filename);
     strcat(command, "\r\n");
     send(networkSocket, command, sizeof(command), 0);
@@ -103,13 +343,15 @@ void renameFile(char filename[]){
     close(networkSocket);
 }
 
-void deleteFile(char filename[]){
+void deleteFile(char filename[], char path[]){
     int networkSocket = FTPConnect();
 
     char command[64] = {0};
     char server_message[64] = {0};
 
-    strcpy(command, "DELE /");
+    strcpy(command, "DELE ");
+    strcat(command, path);
+    strcat(command, "/");
     strcat(command, filename);
     strcat(command, "\r\n");
     send(networkSocket, command, sizeof(command), 0);
@@ -159,14 +401,16 @@ void sendFile(char filename[]){
     close(networkSocket);
 }
 
-void receiveFile(char filename[]){
+void receiveFile(char filename[], char path[]){
     int networkSocket = FTPConnect();
     int passiveSocket = passive(networkSocket);
 
-    char command[64] = {0};
-    char server_message[64] = {0};
+    char command[4096] = {0};
+    char server_message[4096] = {0};
 
-    strcpy(command, "SIZE /");
+    strcpy(command, "SIZE ");
+    strcat(command, path);
+    strcat(command, "/");
     strcat(command, filename);
     strcat(command, "\r\n");
     send(networkSocket, command, sizeof(command), 0);
@@ -179,13 +423,18 @@ void receiveFile(char filename[]){
     }
 
     memset(command, 0, sizeof command);
-    strcpy(command, "RETR /");
+    strcpy(command, "RETR ");
+    strcat(command, path);
+    strcat(command, "/");
     strcat(command, filename);
     strcat(command, "\r\n");
     send(networkSocket, command, sizeof(command), 0);
     memset(server_message, 0, sizeof server_message);
     recv(networkSocket, &server_message, sizeof(server_message), 0);
     printf("%s", server_message);
+
+    //filename[strlen(filename)-1] = 0;
+    //filename[strlen(filename)-2] = 0;
 
     FILE *write_ptr;
     write_ptr = fopen(filename,"wb");
@@ -227,20 +476,23 @@ void listLocal(char path[]){
     }
 }
 
-void list(){
+void list(char path[]){
     int networkSocket = FTPConnect();
     int passiveSocket = passive(networkSocket);
 
     //paprasom failu list'o
     char command[32] = {0};
     char server_message[64] = {0};
-    strcpy(command, "LIST -I\r\n");
+    strcpy(command, "LIST /");
+    strcat(command, path);
+    strcat(command, "\r\n");
     send(networkSocket, command, sizeof(command), 0);
     recv(networkSocket, &server_message, sizeof(server_message), 0);
     printf("%s \n", server_message);
     memset(server_message, 0, sizeof server_message);
 
     unsigned char buffer[1024];
+    memset(buffer, 0, sizeof buffer);
     recv(passiveSocket, &buffer, sizeof(buffer), 0);
     printf("---------------------------------FAILAI ESANTYS FTP-----------------------------\n");
     printf("%s", buffer);
